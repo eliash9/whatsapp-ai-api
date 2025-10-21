@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  db:
+    image: ${MYSQL_ENGINE:-mariadb}:${MYSQL_VERSION:-10.6}
+    container_name: wa-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-apinew}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: wa-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Force DB URL to point to the db service in this compose network (ignore DATABASE_URL in .env)
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-rootpass}@db:3306/${MYSQL_DATABASE:-apinew}
+      HOST: 0.0.0.0
+      PORT: ${PORT:-8000}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8000"
+    command: sh -c "chmod +x node_modules/.bin/prisma && npx prisma generate && npx prisma migrate deploy && npm run start"
+
+volumes:
+  db_data:

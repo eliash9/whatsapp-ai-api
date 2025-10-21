@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dasbor WA Gateway</title>
+    <script>
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { DEFAULT: '#22c55e', 600: '#16a34a', 700: '#15803d' } } } } }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+    <div id="app" class="h-full flex">
+      <aside id="sidebar" class="w-64 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 backdrop-blur supports-[backdrop-filter]:bg-white/40 hidden md:block">
+        <div class="p-4 flex items-center justify-between">
+          <div class="font-semibold">WA Gateway</div>
+          <button id="collapseBtn" class="md:hidden p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">☰</button>
+        </div>
+        <nav class="px-2 pb-4 space-y-1 text-sm">
+          <a data-nav="overview" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Ringkasan</a>
+          <a data-nav="devices" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Perangkat</a>
+          <a data-nav="send" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Kirim</a>
+          <a data-nav="templates" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Template</a>
+          <a data-nav="ai" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Bot AI</a>
+          <a data-nav="broadcast" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Siaran</a>
+          <a href="tickets/index.html" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Tiket</a>
+          <a href="quick-replies/index.html" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Jawab Cepat</a>
+          <a data-nav="guide" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Panduan</a>
+          <a data-nav="logs" class="navlink block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">Log</a>
+        </nav>
+      </aside>
+      <div class="flex-1 min-w-0 flex flex-col">
+        <header class="sticky top-0 z-10 backdrop-blur bg-white/70 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+          <div class="px-4 py-3 flex items-center gap-3">
+            <button id="openSidebar" class="md:hidden p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">☰</button>
+            <div class="font-semibold">Dasbor</div>
+            <div class="ml-auto flex items-center gap-2">
+              <button id="toggleTheme" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm">Mode Gelap</button>
+            </div>
+          </div>
+        </header>
+        <main class="p-4 space-y-6">
+          <section data-page="overview" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div class="rounded-lg border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900"><div class="text-sm text-slate-500 dark:text-slate-400">Perangkat Terhubung</div><div id="cardDevices" class="text-2xl font-semibold mt-1">0</div></div>
+              <div class="rounded-lg border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900"><div class="text-sm text-slate-500 dark:text-slate-400">Terkirim Hari Ini</div><div id="cardSent" class="text-2xl font-semibold mt-1">0</div></div>
+              <div class="rounded-lg border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900"><div class="text-sm text-slate-500 dark:text-slate-400">Gagal</div><div id="cardFailed" class="text-2xl font-semibold mt-1">0</div></div>
+              <div class="rounded-lg border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900"><div class="text-sm text-slate-500 dark:text-slate-400">Antrian</div><div id="cardQueue" class="text-2xl font-semibold mt-1">0</div></div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Gunakan halaman ini untuk melihat ringkasan perangkat terhubung dan aktivitas pesan terkini.</p>
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+              <div class="xl:col-span-2 rounded-lg border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900">
+                <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">Pesan 7 Hari Terakhir</div>
+                <canvas id="chart7d" height="90"></canvas>
+              </div>
+              <div class="rounded-lg border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900 max-h-[360px] overflow-auto" id="activityLog">
+                <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">Aktivitas Terbaru</div>
+                <div id="logList" class="space-y-2 text-sm"></div>
+              </div>
+            </div>
+          </section>
+
+          <section data-page="devices" class="space-y-4 hidden">
+            <div class="flex items-center justify-between">
+              <h2 class="font-semibold">Perangkat</h2>
+              <button id="btnAddDevice" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Tambah Perangkat</button>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Tambah perangkat untuk memulai sesi WhatsApp Web. Klik "Tambah Perangkat" lalu pindai QR dari ponsel.</p>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="text-left text-slate-500 dark:text-slate-400">
+                    <tr>
+                      <th class="px-3 py-2">Nama</th>
+                      <th class="px-3 py-2">Status</th>
+                     
+                      <th class="px-3 py-2 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="devicesTable"></tbody>
+                </table>
+              </div>
+              <div class="flex items-center justify-between p-3 border-t border-slate-200 dark:border-slate-800 text-sm"><div id="devicesInfo">0 item</div><div class="space-x-2"><button data-dev-prev class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Sebelumnya</button><button data-dev-next class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Berikutnya</button></div></div>
+            </div>
+          </section>
+
+          <section data-page="messages" class="space-y-4 hidden">
+            <h2 class="font-semibold">Messages</h2>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div id="messagesToolbar" class="px-3 pt-3 pb-2 flex items-center gap-2 flex-wrap">
+                <div class="text-xs text-slate-500 dark:text-slate-400">Pick Session (auto-selected if only one), click Refresh if needed.</div>
+                <label class="text-sm text-slate-500 dark:text-slate-400">Sesi</label>
+                <select id="msgSession" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm"></select>
+                <label class="text-sm text-slate-500 dark:text-slate-400">Direction</label>
+                <select id="msgDirection" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm"><option value="all">all</option><option value="outbox">outbox</option><option value="inbox">inbox</option></select>
+                <button id="msgRefresh" class="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-sm">Refresh</button>
+                <label class="text-sm text-slate-500 dark:text-slate-400">Search</label>
+                <input id="msgSearch" placeholder="name, number, or text" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm" />
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="text-left text-slate-500 dark:text-slate-400">
+                    <tr><th class="px-3 py-2">Time</th><th class="px-3 py-2">To/From</th><th class="px-3 py-2">Content</th><th class="px-3 py-2">Status</th><th class="px-3 py-2">Retries</th></tr>
+                  </thead>
+                  <tbody id="messagesTable"></tbody>
+                </table>
+              </div>
+              <div class="flex items-center justify-between p-3 border-t border-slate-200 dark:border-slate-800 text-sm"><div id="messagesInfo">0 item</div><div class="space-x-2"><button data-msg-prev class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Sebelumnya</button><button data-msg-next class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Berikutnya</button></div></div>
+            </div>
+          </section>
+
+          <section data-page="send" class="space-y-4 hidden">
+            <h2 class="font-semibold">Kirim Pesan</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <form id="sendForm" class="lg:col-span-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-sm text-slate-500 dark:text-slate-400">Perangkat</label>
+                    <select id="sendDevice" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2"></select>
+                  </div>
+                  <div>
+                    <label class="text-sm text-slate-500 dark:text-slate-400">Kode Negara Default</label>
+                    <input id="sendCC" placeholder="62" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                  </div>
+                  <div>
+                    <label class="text-sm text-slate-500 dark:text-slate-400">Nomor (E.164)</label>
+                    <input id="sendPhone" placeholder="62812xxxxxxx" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                  </div>
+                  <div>
+                    <label class="text-sm text-slate-500 dark:text-slate-400">Jadwalkan (opsional)</label>
+                    <input id="sendSchedule" type="datetime-local" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="text-sm text-slate-500 dark:text-slate-400">Teks</label>
+                    <textarea id="sendText" rows="4" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2"></textarea>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="text-sm text-slate-500 dark:text-slate-400">Lampiran (simulasi)</label>
+                    <input id="sendFile" type="file" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button type="button" id="btnTestSend" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Uji Kirim</button>
+                </div>
+              </form>
+              <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+                <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">Template</div>
+                <div id="templatesList" class="space-y-2 text-sm"></div>
+              </div>
+            </div>
+          </section>
+
+          <section data-page="templates" class="space-y-4 hidden">
+            <div class="flex items-center justify-between"><h2 class="font-semibold">Template</h2><button id="btnAddTpl" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Tambah Template</button></div>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Buat dan kelola template pesan agar pengiriman lebih cepat dan konsisten. Template dapat dimuat ke halaman Kirim.</p>
+            <div id="tplTable" class="grid gap-2"></div>
+          </section>
+
+          <section data-page="broadcast" class="space-y-4 hidden">
+            <h2 class="font-semibold">Siaran & Kampanye</h2>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input id="bcName" placeholder="Nama kampanye" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                <select id="bcDevice" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2"></select>
+                <input id="bcThrottle" placeholder="Pesan/menit (mis. 30)" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                <input id="bcConcurrency" placeholder="Konkruensi (mis. 3)" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                <input id="bcSchedule" type="datetime-local" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                <label class="inline-flex items-center gap-2 text-sm"><input id="bcRespectOptout" type="checkbox" class="rounded border-slate-300"/> Hormati opt-out</label>
+                <div class="md:col-span-2">
+                  <div class="flex items-center justify-between">
+                    <label class="text-sm text-slate-500 dark:text-slate-400">Unggah CSV (kolom: phone,name)</label>
+                    <a href="sample-broadcast.csv" class="text-xs text-brand hover:underline" download>Unduh contoh CSV</a>
+                  </div>
+                  <input id="bcCSV" type="file" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Teks Siaran (supports {{name}} and {{phone}})</label>
+                  <textarea id="bcText" rows="3" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2"></textarea>
+                </div>
+                
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btnStartCampaign" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Mulai</button>
+                <button id="btnPauseCampaign" class="px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm">Jeda</button>
+                <button id="btnResumeCampaign" class="px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm">Lanjut</button>
+                <button id="btnCancelCampaign" class="px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm">Batal</button>
+              </div>
+              <div class="space-y-2">
+                <div class="text-sm">Progres</div>
+                <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded"><div id="bcProgress" class="h-2 bg-brand rounded" style="width:0%"></div></div>
+                <div id="bcSummary" class="text-sm text-slate-500 dark:text-slate-400">antri: 0, terkirim: 0, gagal: 0</div>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+              <div class="text-sm text-slate-500 dark:text-slate-400 mb-2">Template</div>
+              <div id="bcTemplatesList" class="space-y-2 text-sm"></div>
+            </div>
+          </section>
+
+          <section data-page="guide" class="space-y-4 hidden">
+            <h2 class="font-semibold">Panduan API</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Contoh cara mengirim pesan menggunakan REST API untuk sesi yang dipilih.</p>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Sesi</label>
+                  <select id="guideSession" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2"></select>
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Nomor (E.164)</label>
+                  <input id="guidePhone" placeholder="62812xxxxxxx" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Teks</label>
+                  <input id="guideText" placeholder="Halo dari API" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="text-sm text-slate-500 dark:text-slate-400">cURL</div>
+                <pre id="guideCurl" class="text-xs overflow-auto p-3 rounded border border-slate-200 dark:border-slate-800"></pre>
+              </div>
+              <div class="space-y-2">
+                <div class="text-sm text-slate-500 dark:text-slate-400">JavaScript (fetch)</div>
+                <pre id="guideFetch" class="text-xs overflow-auto p-3 rounded border border-slate-200 dark:border-slate-800"></pre>
+              </div>
+              <div class="space-y-2">
+                <div class="text-sm text-slate-500 dark:text-slate-400">Node.js (axios)</div>
+                <pre id="guideAxios" class="text-xs overflow-auto p-3 rounded border border-slate-200 dark:border-slate-800"></pre>
+              </div>
+              <div class="text-xs text-slate-500 dark:text-slate-400">Catatan: untuk nomor pribadi gunakan JID <code>nomor@s.whatsapp.net</code>. Untuk grup gunakan <code>group-id@g.us</code> dan set <code>type</code> = <code>"group"</code>.</div>
+            </div>
+          </section>
+
+          <section data-page="contacts" class="space-y-4 hidden">
+            <div class="flex items-center justify-between"><h2 class="font-semibold">Kontak</h2><div class="space-x-2"><button id="btnImportCSV" class="px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm">Impor CSV</button><button id="btnExportCSV" class="px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm">Ekspor CSV</button><button id="btnAddContact" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Tambah</button></div></div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="text-left text-slate-500 dark:text-slate-400">
+                    <tr><th class="px-3 py-2">Nama</th><th class="px-3 py-2">Nomor</th><th class="px-3 py-2">Tag</th><th class="px-3 py-2">Opt-in</th><th class="px-3 py-2">Catatan</th><th class="px-3 py-2 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="contactsTable"></tbody>
+                </table>
+              </div>
+              <div class="flex items-center justify-between p-3 border-t border-slate-200 dark:border-slate-800 text-sm"><div id="contactsInfo">0 item</div><div class="space-x-2"><button data-ct-prev class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Sebelumnya</button><button data-ct-next class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Berikutnya</button></div></div>
+            </div>
+          </section>
+
+          <section data-page="ai" class="space-y-4 hidden">
+            <div class="flex items-center justify-between"><h2 class="font-semibold">Pengaturan Bot AI</h2></div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Sesi</label>
+                  <select id="aiSession" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2"></select>
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm mt-6"><input id="aiEnabled" type="checkbox"/> Aktifkan AI</label>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Penyedia</label>
+                  <select id="aiProvider" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2">
+                    <option value="custom">Custom</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="agentrouter_bearer">AgentRouter (Bearer)</option>
+                    <option value="agentrouter_xapikey">AgentRouter (X-API-Key)</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="groq">Groq</option>
+                    <option value="ollama">Ollama (local)</option>
+                    <option value="lmstudio">LM Studio (local)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Model</label>
+                  <input id="aiModel" placeholder="gpt-4o-mini" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Temperatur (0..2)</label>
+                  <input id="aiTemp" type="number" step="0.1" min="0" max="2" placeholder="0.7" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">URL Dasar</label>
+                  <input id="aiBaseUrl" placeholder="https://api.openai.com/v1" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Kunci API</label>
+                  <input id="aiApiKey" placeholder="sk-..." class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Header Otorisasi</label>
+                  <input id="aiAuthHeader" placeholder="Authorization or X-API-Key or none" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Skema Otorisasi</label>
+                  <input id="aiAuthScheme" placeholder="Bearer or empty" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Header Tambahan (JSON)</label>
+                  <input id="aiExtraHeaders" placeholder='{"X-Org":"org"}' class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-sm text-slate-500 dark:text-slate-400">Prompt Sistem</label>
+                  <textarea id="aiPrompt" rows="5" class="mt-1 w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" placeholder="Anda adalah asisten WhatsApp yang membantu."></textarea>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="aiSave" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Simpan</button>
+                <input id="aiTestText" placeholder="Teks uji" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" />
+                <button id="aiTest" class="px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm">Uji Balasan</button>
+              </div>
+              <pre id="aiResult" class="text-xs text-slate-400"></pre>
+            </div>
+          </section>
+
+          <section data-page="chats" class="space-y-4 hidden">
+            <div class="flex items-center justify-between"><h2 class="font-semibold">Chats</h2></div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="text-left text-slate-500 dark:text-slate-400">
+                    <tr><th class="px-3 py-2">Nama</th><th class="px-3 py-2">JID</th><th class="px-3 py-2">Pratinjau</th><th class="px-3 py-2 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="chatsTable"></tbody>
+                </table>
+              </div>
+              <div class="flex items-center justify-between p-3 border-t border-slate-200 dark:border-slate-800 text-sm"><div id="chatsInfo">0 item</div><div class="space-x-2"><button data-ch-prev class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Sebelumnya</button><button data-ch-next class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Berikutnya</button></div></div>
+            </div>
+          </section>
+
+          <section data-page="groups" class="space-y-4 hidden">
+            <div class="flex items-center justify-between"><h2 class="font-semibold">Grup</h2></div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="text-left text-slate-500 dark:text-slate-400">
+                    <tr><th class="px-3 py-2">Group</th><th class="px-3 py-2">JID</th><th class="px-3 py-2 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="groupsTable"></tbody>
+                </table>
+              </div>
+              <div class="flex items-center justify-between p-3 border-t border-slate-200 dark:border-slate-800 text-sm"><div id="groupsInfo">0 item</div><div class="space-x-2"><button data-gr-prev class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Sebelumnya</button><button data-gr-next class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Berikutnya</button></div></div>
+            </div>
+          </section>
+
+          <section data-page="logs" class="space-y-4 hidden">
+            <h2 class="font-semibold">Log Aktivitas</h2>
+            <div id="logsContainer" class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 max-h-[500px] overflow-auto">
+              <div id="logsList" class="space-y-2 text-sm"></div>
+              <div id="logsLoading" class="text-center text-slate-500 dark:text-slate-400 py-3">Memuat...</div>
+            </div>
+          </section>
+
+          <section data-page="tickets" class="space-y-4 hidden">
+            <div class="flex items-center justify-between"><h2 class="font-semibold">Tiket</h2></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div class="lg:col-span-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div id="ticketsToolbar" class="px-3 pt-3 pb-2 flex items-center gap-2 flex-wrap">
+                <label class="text-sm text-slate-500 dark:text-slate-400">Sesi</label>
+                <select id="tkSession" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm"></select>
+                <label class="text-sm text-slate-500 dark:text-slate-400">Status</label>
+                <select id="tkStatus" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm">
+                  <option value="">semua</option>
+                  <option value="open">open</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="assigned">assigned</option>
+                  <option value="closed">closed</option>
+                </select>
+                <label class="text-sm text-slate-500 dark:text-slate-400">Cari</label>
+                <input id="tkSearch" placeholder="jid, subject, agen" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm" />
+                <button id="tkRefresh" class="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-sm">Muat Ulang</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="text-left text-slate-500 dark:text-slate-400">
+                    <tr><th class="px-3 py-2">ID</th><th class="px-3 py-2">Pelanggan</th><th class="px-3 py-2">Status</th><th class="px-3 py-2">Agen</th><th class="px-3 py-2">Prioritas</th><th class="px-3 py-2">Terakhir</th><th class="px-3 py-2 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="ticketsTable"></tbody>
+                </table>
+              </div>
+              <div class="flex items-center justify-between p-3 border-t border-slate-200 dark:border-slate-800 text-sm"><div id="ticketsInfo">0 item</div><div class="space-x-2"><button data-tk-prev class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Sebelumnya</button><button data-tk-next class="px-3 py-1 rounded border border-slate-200 dark:border-slate-700">Berikutnya</button></div></div>
+              </div>
+              <div class="lg:col-span-2">
+                <div id="ticketDetail" class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-[70vh] md:h-[calc(100vh-220px)] hidden">
+                  <div id="ticketHeader" class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">Pilih tiket untuk melihat detail.</div>
+                  <div id="ticketMessages" class="flex-1 overflow-auto p-4 space-y-2"></div>
+                  <div class="px-3 py-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                    <div class="flex items-center gap-2">
+                      <input id="tkReplyText" class="flex-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" placeholder="Ketik balasan"/>
+                      <button id="tkReplySend" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Kirim</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div id="modal" class="hidden fixed inset-0 z-50 items-center justify-center">
+      <div class="absolute inset-0 bg-black/50"></div>
+      <div class="relative bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 w-full max-w-lg p-4 space-y-3">
+        <div class="flex items-center justify-between"><div id="modalTitle" class="font-semibold">Dialog</div><button id="modalClose" class="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">✕</button></div>
+        <div id="modalBody"></div>
+        <div id="modalActions" class="flex items-center gap-2 justify-end"></div>
+      </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+
+    <script src="app.js"></script>
+  </body>
+  </html>

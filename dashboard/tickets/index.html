@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tiket • WA Gateway</title>
+    <script>
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { DEFAULT: '#22c55e', 600: '#16a34a', 700: '#15803d' } } } } }
+    </script>
+  </head>
+  <body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+    <div class="h-screen flex">
+      <!-- Sidebar: Ticket List -->
+      <aside class="w-80 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 backdrop-blur supports-[backdrop-filter]:bg-white/40 flex flex-col">
+        <div class="p-3 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
+          <a href="../index.html" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm">Kembali</a>
+          <div class="ml-auto"></div>
+          <button id="toggleTheme" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm">Mode Gelap</button>
+        </div>
+        <div class="p-3 space-y-2">
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500 dark:text-slate-400">Sesi</label>
+            <select id="tkSession" class="w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm"></select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500 dark:text-slate-400">Status</label>
+            <select id="tkStatus" class="w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm">
+              <option value="">semua</option>
+              <option value="open">open</option>
+              <option value="in_progress">in_progress</option>
+              <option value="assigned">assigned</option>
+              <option value="closed">closed</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500 dark:text-slate-400">Cari</label>
+            <input id="tkSearch" placeholder="jid, subject, agen" class="w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm" />
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="tkRefresh" class="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-sm">Muat Ulang</button>
+          </div>
+        </div>
+        <div id="tkList" class="flex-1 overflow-auto divide-y divide-slate-200 dark:divide-slate-800"></div>
+        <div class="p-2 flex items-center justify-between text-xs border-t border-slate-200 dark:border-slate-800">
+          <button data-tk-prev class="px-2 py-1 rounded border border-slate-200 dark:border-slate-700">Prev</button>
+          <div id="ticketsInfo">0 item</div>
+          <button data-tk-next class="px-2 py-1 rounded border border-slate-200 dark:border-slate-700">Next</button>
+        </div>
+      </aside>
+      <!-- Main: Chat Panel -->
+      <main class="flex-1 min-w-0 flex flex-col">
+        <header class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
+          <div class="flex items-center gap-3">
+            <div id="ticketHeader" class="flex-1">Pilih tiket dari sidebar untuk mulai percakapan.</div>
+            <label>Status</label>
+            <select id="tkStatusDetail" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm">
+              <option value="open">open</option>
+              <option value="assigned">assigned</option>
+              <option value="in_progress">in_progress</option>
+              <option value="escalated">escalated</option>
+              <option value="closed">closed</option>
+            </select>
+            <div id="tkAgentWrap" class="hidden items-center gap-2">
+              <label>Agen</label>
+              <select id="tkAgentSel" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm"></select>
+            </div>
+            <div id="tkSlaWrap" class="hidden items-center gap-2">
+              <label>SLA</label>
+              <input id="tkSla" type="datetime-local" class="rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm" />
+              <button id="tkRemind" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm">Kirim Pengingat</button>
+              <button id="tkEscalate" class="px-3 py-1.5 rounded bg-amber-500 text-white text-sm">Eskalasi</button>
+            </div>
+            <button id="tkSaveMeta" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm">Simpan</button>
+            <button id="tkAiToggle" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm">AI: -</button>
+            <button id="tkClose" class="px-3 py-1.5 rounded bg-red-600 text-white text-sm">Tutup</button>
+            <button id="tkClear" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm" title="Hapus semua pesan di tiket ini" disabled>Clear Chat</button>
+            <button id="tkDelete" class="px-3 py-1.5 rounded border border-red-600 text-red-600 text-sm" title="Hapus tiket (closed saja)" disabled>Hapus Tiket</button>
+          </div>
+        </header>
+        <section id="ticketMessages" class="flex-1 overflow-auto p-4 space-y-2"></section>
+        <footer class="px-3 py-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div class="relative flex items-center gap-2">
+            <input id="tkReplyText" class="flex-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent px-3 py-2" placeholder="Ketik balasan atau caption (ketik / untuk Jawab Cepat)"/>
+            <input id="tkReplyFile" type="file" accept="image/*,video/*" class="hidden" />
+            <button id="tkReplyPick" title="Lampirkan gambar/video" class="px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm">Lampiran</button>
+            <span id="tkReplyFileName" class="text-xs text-slate-500 dark:text-slate-400"></span>
+            <button id="tkReplySend" class="px-3 py-2 rounded bg-brand text-white text-sm hover:bg-brand-600">Kirim</button>
+
+            <!-- Slash menu dropdown -->
+            <div id="qrMenu" class="hidden absolute left-0 right-32 bottom-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow max-h-64 overflow-auto z-10">
+              <div class="p-2 text-xs text-slate-500 dark:text-slate-400">Ketik untuk mencari template…</div>
+              <div id="qrMenuList" class="divide-y divide-slate-100 dark:divide-slate-700"></div>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+    <!-- Lightbox for image zoom -->
+    <div id="mediaLightbox" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4">
+      <button id="mediaLightboxClose" class="absolute top-3 right-3 px-3 py-1.5 rounded bg-white/20 text-white">Tutup</button>
+      <img id="mediaLightboxImg" alt="preview" class="max-h-full max-w-full object-contain rounded shadow" />
+    </div>
+
+  </body>
+  </html>

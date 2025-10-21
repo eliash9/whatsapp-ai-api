@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Baileys API Gateway - Dashboard</title>
+    <style>
+      :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22c55e; --danger:#ef4444; --border:#1f2937 }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); }
+      header { padding: 16px 20px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between }
+      header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+      main { padding: 20px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+      .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+      .card header { border: 0; padding: 12px 14px; font-weight: 600; font-size: 14px; color: var(--muted); }
+      .card .content { padding: 14px; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; }
+      input, select, button, textarea { background: #0b1220; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+      input, select, textarea { width: 100%; }
+      button { cursor: pointer; background: #0b1220; }
+      button.primary { background: var(--accent); color: #052e12; border-color: #16a34a; }
+      button.danger { background: #3b0a0a; border-color: #7f1d1d; color: #fecaca }
+      .muted { color: var(--muted); }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .list { display: grid; gap: 8px; }
+      .item { display:flex; align-items:center; justify-content:space-between; padding:10px; border:1px solid var(--border); border-radius:6px }
+      .qr { display:flex; gap:12px; align-items:flex-start }
+      .qr img { width: 240px; height: 240px; background:#000; border-radius: 6px; border:1px solid var(--border) }
+      pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; color: var(--muted); background:#0b1220; padding:10px; border-radius:6px; border:1px solid var(--border) }
+      .sep { height:1px; background:var(--border); margin:12px 0 }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Baileys API Gateway</h1>
+      <div class="muted">Simple management dashboard</div>
+    </header>
+    <main>
+      <section class="card">
+        <header>Sessions</header>
+        <div class="content">
+          <div class="row" style="gap:12px; align-items:flex-end">
+            <div style="flex:1">
+              <label class="muted">Session ID</label>
+              <input id="newSessionId" placeholder="e.g. my-session" />
+            </div>
+            <div>
+              <label class="muted">Mode</label>
+              <select id="loginMode">
+                <option value="sse">SSE (QR live)</option>
+                <option value="normal">Normal</option>
+              </select>
+            </div>
+            <div>
+              <button class="primary" id="btnCreate">Create</button>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="list" id="sessions"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <header>Login / QR</header>
+        <div class="content">
+          <div class="qr">
+            <img id="qr" alt="qr" />
+            <div style="flex:1">
+              <div class="muted">Connection state:</div>
+              <pre id="connState">-</pre>
+              <div class="row" style="margin-top:8px">
+                <button id="btnStop">Stop</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="grid-column: 1 / span 2">
+        <header>Send Message</header>
+        <div class="content grid-2">
+          <div>
+            <label class="muted">Session</label>
+            <select id="sendSessionSelect"></select>
+          </div>
+          <div>
+            <label class="muted">Type</label>
+            <select id="sendType">
+              <option value="number">number</option>
+              <option value="group">group</option>
+            </select>
+          </div>
+          <div>
+            <label class="muted">Default country code</label>
+            <input id="defaultCC" placeholder="e.g. 62" />
+          </div>
+          <div id="phoneContainer">
+            <label class="muted">Phone number</label>
+            <input id="sendPhone" placeholder="e.g. 62812xxxxxxx (no @jid)" />
+          </div>
+          <div id="groupJidContainer" style="display:none">
+            <label class="muted">Group JID</label>
+            <input id="sendGroupJid" placeholder="e.g. 1203630xxxxx@g.us" />
+          </div>
+          <div>
+            <label class="muted">Text</label>
+            <input id="sendText" placeholder="hello world" />
+          </div>
+          <div>
+            <button class="primary" id="btnSend">Send</button>
+          </div>
+          <div>
+            <pre id="sendResult">-</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <header>Chats</header>
+        <div class="content">
+          <div class="row" style="gap:12px; align-items:flex-end">
+            <div style="flex:1">
+              <label class="muted">Session</label>
+              <select id="chatsSessionSelect"></select>
+            </div>
+            <div>
+              <button id="btnLoadChats">Refresh</button>
+              <button id="btnMoreChats">Load more</button>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="list" id="chatsList"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <header>Contacts</header>
+        <div class="content">
+          <div class="row" style="gap:12px; align-items:flex-end">
+            <div style="flex:1">
+              <label class="muted">Session</label>
+              <select id="contactsSessionSelect"></select>
+            </div>
+            <div>
+              <button id="btnLoadContacts">Refresh</button>
+              <button id="btnMoreContacts">Load more</button>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="list" id="contactsList"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <header>Groups</header>
+        <div class="content">
+          <div class="row" style="gap:12px; align-items:flex-end">
+            <div style="flex:1">
+              <label class="muted">Session</label>
+              <select id="groupsSessionSelect"></select>
+            </div>
+            <div>
+              <button id="btnLoadGroups">Refresh</button>
+              <button id="btnMoreGroups">Load more</button>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="list" id="groupsList"></div>
+        </div>
+      </section>
+
+      <section class="card" style="grid-column: 1 / span 2">
+        <header>Messages</header>
+        <div class="content">
+          <div class="row" style="gap:12px; align-items:flex-end">
+            <div>
+              <label class="muted">Session</label>
+              <select id="msgsSessionSelect"></select>
+            </div>
+            <div style="flex:1">
+              <label class="muted">JID</label>
+              <input id="msgsJid" placeholder="target jid (auto-filled from lists)" />
+            </div>
+            <div>
+              <button id="btnLoadMsgs">Refresh</button>
+              <button id="btnMoreMsgs">Load more</button>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="list" id="msgsList"></div>
+        </div>
+      </section>
+    </main>
+    <script type="text/javascript">
+      const apiBase = window.location.origin;
+      const $ = (q) => document.querySelector(q);
+      let currentEventSource = null;
+
+      async function fetchJSON(url, options) {
+        const res = await fetch(url, options);
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok) throw data;
+        return data;
+      }
+
+      let sessionsCache = [];
+      let chatsCursor = null;
+      let contactsCursor = null;
+      let groupsCursor = null;
+      let msgsCursor = null;
+
+      async function populateSessionSelects(list) {
+        const selects = [
+          $('#sendSessionSelect'),
+          $('#chatsSessionSelect'),
+          $('#contactsSessionSelect'),
+          $('#groupsSessionSelect'),
+          $('#msgsSessionSelect'),
+        ].filter(Boolean);
+        for (const sel of selects) {
+          sel.innerHTML = '';
+          for (const id of list) {
+            const opt = document.createElement('option');
+            opt.value = id; opt.textContent = id; sel.append(opt);
+          }
+        }
+      }
+
+      async function loadSessions() {
+        const list = await fetchJSON(`${apiBase}/sessions`);
+        sessionsCache = Array.isArray(list) ? list : [];
+        await populateSessionSelects(sessionsCache);
+        const container = $('#sessions');
+        container.innerHTML = '';
+        if (!Array.isArray(list) || list.length === 0) {
+          container.innerHTML = '<div class="muted">No sessions</div>';
+          return;
+        }
+        for (const id of list) {
+          const item = document.createElement('div');
+          item.className = 'item';
+          const left = document.createElement('div');
+          const right = document.createElement('div');
+
+          const name = document.createElement('div');
+          name.textContent = id;
+          const status = document.createElement('span');
+          status.className = 'muted';
+          status.textContent = ' • ...';
+          left.append(name, status);
+
+          const del = document.createElement('button');
+          del.className = 'danger';
+          del.textContent = 'Delete';
+          del.onclick = async () => {
+            if (!confirm(`Delete session ${id}?`)) return;
+            await fetchJSON(`${apiBase}/sessions/${id}`, { method: 'DELETE' });
+            await loadSessions();
+          };
+          right.append(del);
+          item.append(left, right);
+          container.append(item);
+
+          // fetch status
+          fetchJSON(`${apiBase}/sessions/${id}/status`).then((s) => {
+            status.textContent = ` • ${s.status}`;
+          }).catch(()=>{ status.textContent = ' • unknown'; });
+        }
+      }
+
+      function stopSSE() {
+        if (currentEventSource) {
+          currentEventSource.close();
+          currentEventSource = null;
+        }
+      }
+
+      async function createSession() {
+        const id = $('#newSessionId').value.trim();
+        if (!id) return alert('Session ID is required');
+        const mode = $('#loginMode').value;
+        if (mode === 'normal') {
+          try {
+            await fetchJSON(`${apiBase}/sessions/add`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: id })
+            });
+            await loadSessions();
+            alert('Session created');
+          } catch (e) {
+            alert(e?.error || 'Failed to create session');
+          }
+          return;
+        }
+        // SSE mode
+        stopSSE();
+        $('#qr').src = '';
+        $('#connState').textContent = '-';
+        const url = `${apiBase}/sessions/${encodeURIComponent(id)}/add-sse`;
+        currentEventSource = new EventSource(url);
+        currentEventSource.onerror = () => { stopSSE(); };
+        currentEventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          $('#qr').src = data.qr || '';
+          $('#connState').textContent = JSON.stringify(data, null, 2);
+          if (data.connection === 'open') {
+            loadSessions();
+          }
+        };
+      }
+
+      function normalizePhone(num){
+        let s = (num||'').toString().trim();
+        s = s.replace(/[^0-9]/g,'');
+        const cc = ($('#defaultCC').value||'').replace(/[^0-9]/g,'');
+        if (s.startsWith('0') && cc) {
+          s = cc + s.slice(1);
+        }
+        return s;
+      }
+
+      async function sendMessage() {
+        const sessionId = $('#sendSessionSelect').value;
+        const type = $('#sendType').value;
+        const text = $('#sendText').value;
+        if (!sessionId || !text) return alert('Fill all fields');
+
+        let jid = '';
+        if (type === 'number') {
+          const phone = normalizePhone($('#sendPhone').value);
+          if (!phone) return alert('Phone number is required');
+          jid = `${phone}@s.whatsapp.net`;
+        } else {
+          jid = $('#sendGroupJid').value.trim();
+          if (!jid) return alert('Group JID is required');
+        }
+
+        try {
+          const result = await fetchJSON(`${apiBase}/${encodeURIComponent(sessionId)}/messages/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jid, type, message: { text } })
+          });
+          $('#sendResult').textContent = JSON.stringify(result, null, 2);
+        } catch (e) {
+          $('#sendResult').textContent = JSON.stringify(e, null, 2);
+        }
+      }
+
+      function onSendTypeChange(){
+        const t = $('#sendType').value;
+        $('#phoneContainer').style.display = t === 'number' ? '' : 'none';
+        $('#groupJidContainer').style.display = t === 'group' ? '' : 'none';
+      }
+
+      function jidToPhone(jid){
+        if (!jid) return '';
+        return jid.replace(/@s\.whatsapp\.net$/, '');
+      }
+
+      async function loadChats(reset=true){
+        const sid = $('#chatsSessionSelect').value;
+        if (!sid) return;
+        try {
+          const url = new URL(`${apiBase}/${encodeURIComponent(sid)}/chats`);
+          url.searchParams.set('limit','25');
+          if (!reset && chatsCursor) url.searchParams.set('cursor', chatsCursor);
+          const res = await fetchJSON(url.toString());
+          const list = $('#chatsList');
+          if (reset) list.innerHTML = '';
+          for (const c of res.data || []){
+            const jid = c.id || c.remoteJid || c.jid;
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.textContent = jid;
+            div.title = 'Click to prefill Send form';
+            div.style.cursor = 'pointer';
+            div.onclick = () => {
+              $('#sendSessionSelect').value = sid;
+              if (/@g\.us$/.test(jid)) {
+                $('#sendType').value = 'group'; onSendTypeChange();
+                $('#sendGroupJid').value = jid;
+              } else {
+                $('#sendType').value = 'number'; onSendTypeChange();
+                $('#sendPhone').value = jidToPhone(jid);
+              }
+              $('#msgsSessionSelect').value = sid;
+              $('#msgsJid').value = jid;
+              msgsCursor = null;
+              loadMessages(true);
+            };
+            list.append(div);
+          }
+          chatsCursor = res.cursor || null;
+          if ((!res.data || res.data.length===0) && reset){ list.innerHTML = '<div class="muted">No chats</div>'; }
+        } catch(e){ if(reset) $('#chatsList').innerHTML = '<div class="muted">Failed to load</div>'; }
+      }
+
+      async function loadContacts(reset=true){
+        const sid = $('#contactsSessionSelect').value;
+        if (!sid) return;
+        try {
+          const url = new URL(`${apiBase}/${encodeURIComponent(sid)}/contacts`);
+          url.searchParams.set('limit','25');
+          if (!reset && contactsCursor) url.searchParams.set('cursor', contactsCursor);
+          const res = await fetchJSON(url.toString());
+          const list = $('#contactsList');
+          if (reset) list.innerHTML = '';
+          for (const c of res.data || []){
+            const jid = c.id;
+            const label = c.name || c.notify || jid;
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.textContent = `${label} (${jid})`;
+            div.title = 'Click to prefill Send form';
+            div.style.cursor = 'pointer';
+            div.onclick = () => {
+              $('#sendSessionSelect').value = sid;
+              $('#sendType').value = 'number'; onSendTypeChange();
+              $('#sendPhone').value = jidToPhone(jid);
+              $('#msgsSessionSelect').value = sid;
+              $('#msgsJid').value = jid;
+              msgsCursor = null;
+              loadMessages(true);
+            };
+            list.append(div);
+          }
+          contactsCursor = res.cursor || null;
+          if ((!res.data || res.data.length===0) && reset){ list.innerHTML = '<div class="muted">No contacts</div>'; }
+        } catch(e){ if(reset) $('#contactsList').innerHTML = '<div class="muted">Failed to load</div>'; }
+      }
+
+      async function loadGroups(reset=true){
+        const sid = $('#groupsSessionSelect').value;
+        if (!sid) return;
+        try {
+          const url = new URL(`${apiBase}/${encodeURIComponent(sid)}/groups`);
+          url.searchParams.set('limit','25');
+          if (!reset && groupsCursor) url.searchParams.set('cursor', groupsCursor);
+          const res = await fetchJSON(url.toString());
+          const list = $('#groupsList');
+          if (reset) list.innerHTML = '';
+          for (const g of res.data || []){
+            const jid = g.id;
+            const label = g.subject || g.name || jid;
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.textContent = `${label} (${jid})`;
+            div.title = 'Click to prefill Send form';
+            div.style.cursor = 'pointer';
+            div.onclick = () => {
+              $('#sendSessionSelect').value = sid;
+              $('#sendType').value = 'group'; onSendTypeChange();
+              $('#sendGroupJid').value = jid;
+              $('#msgsSessionSelect').value = sid;
+              $('#msgsJid').value = jid;
+              msgsCursor = null;
+              loadMessages(true);
+            };
+            list.append(div);
+          }
+          groupsCursor = res.cursor || null;
+          if ((!res.data || res.data.length===0) && reset){ list.innerHTML = '<div class="muted">No groups</div>'; }
+        } catch(e){ if(reset) $('#groupsList').innerHTML = '<div class="muted">Failed to load</div>'; }
+      }
+
+      function extractText(msg){
+        try {
+          const m = msg.message || {};
+          if (m.conversation) return m.conversation;
+          if (m.extendedTextMessage?.text) return m.extendedTextMessage.text;
+          if (m.imageMessage?.caption) return m.imageMessage.caption;
+          if (m.videoMessage?.caption) return m.videoMessage.caption;
+          if (m.documentMessage?.fileName) return m.documentMessage.fileName;
+          if (m.audioMessage) return '[audio]';
+          if (m.stickerMessage) return '[sticker]';
+          return Object.keys(m)[0] || '';
+        } catch { return ''; }
+      }
+
+      function detectMedia(msg){
+        const m = msg.message || {};
+        const t = ['imageMessage','videoMessage','documentMessage','audioMessage','stickerMessage'];
+        for (const k of t){ if (m[k]) return k; }
+        return null;
+      }
+
+      function guessMime(msg){
+        const m = msg.message || {};
+        const k = detectMedia(msg);
+        const mime = m[k]?.mimetype || 'application/octet-stream';
+        return mime;
+      }
+
+      function filenameFor(msg){
+        const m = msg.message || {};
+        if (m.documentMessage?.fileName) return m.documentMessage.fileName;
+        const k = detectMedia(msg) || 'file';
+        const ext = (m[k]?.mimetype||'').split('/')[1] || 'bin';
+        return `${k}-${msg.key?.id || Date.now()}.${ext}`;
+      }
+
+      async function downloadMedia(msg){
+        const sid = $('#msgsSessionSelect').value;
+        try {
+          const res = await fetch(`${apiBase}/${encodeURIComponent(sid)}/messages/download`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(msg)
+          });
+          if (!res.ok) throw new Error('Failed');
+          const blob = await res.blob();
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = filenameFor(msg);
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+        } catch (e) {
+          alert('Download failed');
+        }
+      }
+
+      async function loadMessages(reset=true){
+        const sid = $('#msgsSessionSelect').value;
+        const jid = $('#msgsJid').value.trim();
+        if (!sid || !jid) return;
+        try {
+          const url = new URL(`${apiBase}/${encodeURIComponent(sid)}/chats/${encodeURIComponent(jid)}`);
+          url.searchParams.set('limit','25');
+          if (!reset && msgsCursor) url.searchParams.set('cursor', msgsCursor);
+          const res = await fetchJSON(url.toString());
+          const list = $('#msgsList');
+          if (reset) list.innerHTML = '';
+          for (const m of res.data || []){
+            const div = document.createElement('div');
+            div.className = 'item';
+            const text = extractText(m) || '[message]';
+            div.textContent = `${m.key?.fromMe ? 'Me' : (m.pushName || m.key?.participant || '')}: ${text}`;
+            const mediaType = detectMedia(m);
+            if (mediaType){
+              const btn = document.createElement('button');
+              btn.textContent = 'Download';
+              btn.style.marginLeft = '8px';
+              btn.onclick = () => downloadMedia(m);
+              div.append(btn);
+            }
+            list.append(div);
+          }
+          msgsCursor = res.cursor || null;
+          if ((!res.data || res.data.length===0) && reset){ list.innerHTML = '<div class="muted">No messages</div>'; }
+        } catch(e){ if(reset) $('#msgsList').innerHTML = '<div class="muted">Failed to load</div>'; }
+      }
+
+      // events
+      $('#btnCreate').onclick = createSession;
+      $('#btnStop').onclick = stopSSE;
+      $('#btnSend').onclick = sendMessage;
+      $('#btnLoadChats').onclick = () => { chatsCursor = null; loadChats(true); };
+      $('#btnMoreChats').onclick = () => loadChats(false);
+      $('#btnLoadContacts').onclick = () => { contactsCursor = null; loadContacts(true); };
+      $('#btnMoreContacts').onclick = () => loadContacts(false);
+      $('#btnLoadGroups').onclick = () => { groupsCursor = null; loadGroups(true); };
+      $('#btnMoreGroups').onclick = () => loadGroups(false);
+      $('#btnLoadMsgs').onclick = () => { msgsCursor = null; loadMessages(true); };
+      $('#btnMoreMsgs').onclick = () => loadMessages(false);
+      $('#sendType').onchange = onSendTypeChange;
+      loadSessions().then(()=>{
+        if (sessionsCache.length){
+          $('#sendSessionSelect').value = sessionsCache[0];
+          $('#chatsSessionSelect').value = sessionsCache[0];
+          $('#contactsSessionSelect').value = sessionsCache[0];
+          $('#groupsSessionSelect').value = sessionsCache[0];
+          $('#msgsSessionSelect').value = sessionsCache[0];
+        }
+        onSendTypeChange();
+      });
+    </script>
+  </body>
+</html>

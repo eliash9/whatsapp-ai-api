@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jawab Cepat · WA Gateway</title>
+    <script>
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { DEFAULT: '#22c55e', 600: '#16a34a', 700: '#15803d' } } } } }
+    </script>
+  </head>
+  <body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+    <div class="h-screen flex flex-col">
+      <header class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 text-sm">
+        <div class="flex items-center gap-2">
+          <a href="../index.html" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700">Kembali</a>
+          <div class="font-medium">Kelola Jawab Cepat</div>
+          <div class="ml-auto"></div>
+          <button id="toggleTheme" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700">Mode Gelap</button>
+        </div>
+      </header>
+      <main class="flex-1 grid grid-cols-1 md:grid-cols-2">
+        <section class="border-r border-slate-200 dark:border-slate-800 overflow-auto">
+          <div class="p-3 flex items-center gap-2">
+            <input id="qrSearch" placeholder="Cari judul/isi…" class="flex-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm" />
+            <button id="qrRefresh" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm">Muat Ulang</button>
+          </div>
+          <div id="qrList" class="divide-y divide-slate-100 dark:divide-slate-800"></div>
+        </section>
+        <section class="p-4 space-y-3">
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500 dark:text-slate-400">Judul</label>
+            <input id="qrTitle" class="w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500 dark:text-slate-400">Isi</label>
+            <textarea id="qrText" rows="10" class="w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm"></textarea>
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs text-slate-500 dark:text-slate-400">Tag (opsional, koma-separator)</label>
+            <input id="qrTags" class="w-full rounded border border-slate-200 dark:border-slate-700 bg-transparent px-2 py-1 text-sm" />
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="qrNew" class="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-sm">Baru</button>
+            <button id="qrSave" class="px-3 py-1.5 rounded bg-brand text-white text-sm">Simpan</button>
+            <button id="qrDelete" class="px-3 py-1.5 rounded bg-red-600 text-white text-sm">Hapus</button>
+          </div>
+          <div id="qrHint" class="text-xs text-slate-500 dark:text-slate-400">Pilih item dari daftar atau buat baru.</div>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+  </html>
+
